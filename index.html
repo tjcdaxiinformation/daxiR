@@ -1,308 +1,235 @@
-import React, { useState, useEffect, useMemo } from 'react';
-import { Trophy, Medal, Users, Edit3, Save, RefreshCw, Plus, Minus, LayoutGrid, List } from 'lucide-react';
-import { initializeApp } from 'firebase/app';
-import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
-import { getFirestore, collection, doc, onSnapshot, setDoc, updateDoc, query } from 'firebase/firestore';
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大溪宗教教育團體即時計分板</title>
+    <!-- 載入 Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- 載入 React & Babel -->
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <!-- 載入 Lucide 圖示 -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334155; }
+    </style>
+</head>
+<body class="bg-slate-950 text-white">
+    <div id="root"></div>
 
-/**
- * 初始化 Firebase 相關設定
- */
-const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : null;
-const appId = typeof __app_id !== 'undefined' ? __app_id : 'daxi-religious-event';
+    <script type="text/babel">
+        const { useState, useEffect, useMemo } = React;
 
-let db = null;
-let auth = null;
+        // 圖示組件
+        const Icon = ({ name, className }) => {
+            const [svg, setSvg] = useState('');
+            useEffect(() => {
+                // 使用 Lucide 建立圖示
+                if (window.lucide) {
+                    const iconElement = document.createElement('div');
+                    const icon = window.lucide.icons[name];
+                    if (icon) {
+                        const svgString = window.lucide.createIcons({ icons: { [name]: icon } });
+                    }
+                }
+            }, [name]);
+            
+            // 由於 UMD 版本限制，我們直接使用 SVG 路徑來確保穩定性
+            const icons = {
+                trophy: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>,
+                users: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
+                edit: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>,
+                save: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>,
+                refresh: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></svg>,
+                plus: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+                minus: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="5" y1="12" x2="19" y2="12"/></svg>,
+                grid: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
+                list: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+            };
+            return icons[name] || null;
+        };
 
-if (firebaseConfig) {
-  const app = initializeApp(firebaseConfig);
-  db = getFirestore(app);
-  auth = getAuth(app);
-}
+        const STAGE_NAMES = ['第一關', '第二關', '第三關', '第四關', '第五關', '第六關'];
+        const initialGroups = [
+            { id: '1', name: '第一組', scores: [5, 5, 5, 0, 0, 0], total: 15 },
+            { id: '2', name: '第二組', scores: [2, 5, 5, 0, 0, 0], total: 12 },
+            { id: '3', name: '第三組', scores: [2, 2, 2, 0, 0, 0], total: 6 },
+            { id: '4', name: '第四組', scores: [2, 0, 0, 2, 0, 0], total: 4 },
+        ];
 
-// 預設資料 (根據上傳的 CSV 結構)
-const initialGroups = [
-  { id: '1', name: '第一組', scores: [5, 5, 5, 0, 0, 0], total: 15 },
-  { id: '2', name: '第二組', scores: [2, 5, 5, 0, 0, 0], total: 12 },
-  { id: '3', name: '第三組', scores: [2, 2, 2, 0, 0, 0], total: 6 },
-  { id: '4', name: '第四組', scores: [2, 0, 0, 2, 0, 0], total: 4 },
-];
+        function App() {
+            const [groups, setGroups] = useState(initialGroups);
+            const [editMode, setEditMode] = useState(false);
+            const [viewMode, setViewMode] = useState('grid');
 
-const STAGE_NAMES = ['第一關', '第二關', '第三關', '第四關', '第五關', '第六關'];
+            // 更新分數邏輯
+            const updateScore = (groupId, stageIndex, delta) => {
+                const newGroups = groups.map(group => {
+                    if (group.id === groupId) {
+                        const newScores = [...group.scores];
+                        newScores[stageIndex] = Math.max(0, newScores[stageIndex] + delta);
+                        const newTotal = newScores.reduce((a, b) => a + b, 0);
+                        return { ...group, scores: newScores, total: newTotal };
+                    }
+                    return group;
+                });
+                setGroups(newGroups);
+            };
 
-export default function App() {
-  const [groups, setGroups] = useState(initialGroups);
-  const [user, setUser] = useState(null);
-  const [editMode, setEditMode] = useState(false);
-  const [isSyncing, setIsSyncing] = useState(false);
-  const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+            const rankedGroups = useMemo(() => {
+                return [...groups].sort((a, b) => b.total - a.total);
+            }, [groups]);
 
-  // Firebase 認證與監聽
-  useEffect(() => {
-    if (!auth || !db) return;
+            const resetScores = () => {
+                if (confirm("確定要將所有分數歸零嗎？")) {
+                    const reset = groups.map(g => ({
+                        ...g,
+                        scores: [0, 0, 0, 0, 0, 0],
+                        total: 0
+                    }));
+                    setGroups(reset);
+                }
+            };
 
-    const initAuth = async () => {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (error) {
-        console.error("Auth error:", error);
-      }
-    };
-
-    initAuth();
-    const unsubscribeAuth = onAuthStateChanged(auth, (u) => {
-      setUser(u);
-    });
-
-    return () => unsubscribeAuth();
-  }, []);
-
-  // 監聽數據更新
-  useEffect(() => {
-    if (!db || !user) return;
-
-    const q = collection(db, 'artifacts', appId, 'public', 'data', 'scoreboard');
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      if (!snapshot.empty) {
-        const fetchedGroups = snapshot.docs.map(doc => doc.data());
-        // 按照 ID 排序以保持原始順序，之後在 UI 再做排名排序
-        setGroups(fetchedGroups.sort((a, b) => parseInt(a.id) - parseInt(b.id)));
-      }
-    }, (error) => {
-      console.error("Firestore error:", error);
-    });
-
-    return () => unsubscribe();
-  }, [user]);
-
-  // 更新分數邏輯
-  const updateScore = async (groupId, stageIndex, delta) => {
-    const newGroups = groups.map(group => {
-      if (group.id === groupId) {
-        const newScores = [...group.scores];
-        newScores[stageIndex] = Math.max(0, newScores[stageIndex] + delta);
-        const newTotal = newScores.reduce((a, b) => a + b, 0);
-        
-        const updatedGroup = { ...group, scores: newScores, total: newTotal };
-        
-        // 如果有 Firebase，異步更新到雲端
-        if (db && user) {
-          const docRef = doc(db, 'artifacts', appId, 'public', 'data', 'scoreboard', groupId);
-          setDoc(docRef, updatedGroup);
-        }
-        
-        return updatedGroup;
-      }
-      return group;
-    });
-    
-    setGroups(newGroups);
-  };
-
-  // 排序後的隊伍 (用於顯示排名)
-  const rankedGroups = useMemo(() => {
-    return [...groups].sort((a, b) => b.total - a.total);
-  }, [groups]);
-
-  // 重置功能
-  const resetScores = () => {
-    if (window.confirm("確定要將所有分數歸零嗎？")) {
-      const reset = groups.map(g => ({
-        ...g,
-        scores: [0, 0, 0, 0, 0, 0],
-        total: 0
-      }));
-      setGroups(reset);
-      if (db && user) {
-        reset.forEach(g => {
-          setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'scoreboard', g.id), g);
-        });
-      }
-    }
-  };
-
-  return (
-    <div className="min-h-screen bg-slate-950 text-white font-sans p-4 md:p-8 overflow-hidden flex flex-col">
-      {/* 頂部標題列 */}
-      <header className="flex justify-between items-center mb-8 border-b border-slate-800 pb-6">
-        <div className="flex items-center gap-4">
-          <div className="bg-yellow-500 p-3 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.3)]">
-            <Trophy className="w-8 h-8 text-slate-950" />
-          </div>
-          <div>
-            <h1 className="text-3xl md:text-5xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
-              大溪宗教教育團體共習活動
-            </h1>
-            <p className="text-slate-400 mt-1 flex items-center gap-2">
-              <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-              即時電子計分板系統
-            </p>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <button 
-            onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-            className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
-            title="切換視圖"
-          >
-            {viewMode === 'grid' ? <List className="w-6 h-6" /> : <LayoutGrid className="w-6 h-6" />}
-          </button>
-          <button 
-            onClick={() => setEditMode(!editMode)}
-            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${editMode ? 'bg-green-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
-          >
-            {editMode ? <Save className="w-5 h-5" /> : <Edit3 className="w-5 h-5" />}
-            {editMode ? '完成編輯' : '後台管理'}
-          </button>
-          {editMode && (
-            <button 
-              onClick={resetScores}
-              className="p-3 rounded-xl bg-red-900/50 text-red-400 hover:bg-red-800 transition-colors border border-red-800/50"
-              title="重置分數"
-            >
-              <RefreshCw className="w-6 h-6" />
-            </button>
-          )}
-        </div>
-      </header>
-
-      {/* 主計分區域 */}
-      <main className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-        <div className={viewMode === 'grid' 
-          ? "grid grid-cols-1 lg:grid-cols-2 gap-6" 
-          : "flex flex-col gap-4"}>
-          
-          {rankedGroups.map((group, index) => (
-            <div 
-              key={group.id}
-              className={`relative overflow-hidden rounded-3xl transition-all duration-500 transform ${
-                index === 0 ? 'scale-[1.02] z-10' : 'scale-100'
-              } ${
-                viewMode === 'list' ? 'flex items-center p-6' : 'p-8'
-              } bg-gradient-to-br from-slate-900 to-slate-800 border-2 ${
-                index === 0 ? 'border-yellow-500/50 shadow-[0_0_40px_rgba(234,179,8,0.15)]' : 'border-slate-800'
-              }`}
-            >
-              {/* 名次標記 */}
-              <div className={`absolute top-0 left-0 w-16 h-16 flex items-center justify-center font-black text-2xl ${
-                index === 0 ? 'bg-yellow-500 text-slate-950' : 
-                index === 1 ? 'bg-slate-300 text-slate-900' : 
-                index === 2 ? 'bg-orange-700 text-white' : 'bg-slate-700 text-slate-400'
-              } rounded-br-3xl shadow-lg`}>
-                {index + 1}
-              </div>
-
-              {/* 隊伍資訊區 */}
-              <div className={`${viewMode === 'list' ? 'flex-1 flex items-center' : 'mb-8 mt-4 flex justify-between items-end'}`}>
-                <div className="flex items-center gap-6">
-                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${index === 0 ? 'bg-yellow-500/10' : 'bg-slate-800'}`}>
-                    <Users className={`w-8 h-8 ${index === 0 ? 'text-yellow-500' : 'text-slate-400'}`} />
-                  </div>
-                  <div>
-                    <h2 className="text-4xl font-bold">{group.name}</h2>
-                    <div className="flex gap-2 mt-2">
-                      {STAGE_NAMES.map((name, i) => (
-                        <div key={i} className={`w-2 h-2 rounded-full ${group.scores[i] > 0 ? 'bg-blue-500' : 'bg-slate-700'}`}></div>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-
-                {viewMode === 'list' && (
-                  <div className="flex-1 px-12 grid grid-cols-6 gap-2">
-                    {group.scores.map((score, sIdx) => (
-                      <div key={sIdx} className="text-center group">
-                        <div className="text-[10px] text-slate-500 mb-1 uppercase tracking-wider">{STAGE_NAMES[sIdx]}</div>
-                        <div className="flex items-center justify-center gap-2">
-                          {editMode && (
-                            <button onClick={() => updateScore(group.id, sIdx, -1)} className="p-1 text-slate-500 hover:text-red-500"><Minus className="w-4 h-4" /></button>
-                          )}
-                          <span className={`text-xl font-mono ${score > 0 ? 'text-blue-400' : 'text-slate-600'}`}>{score}</span>
-                          {editMode && (
-                            <button onClick={() => updateScore(group.id, sIdx, 1)} className="p-1 text-slate-500 hover:text-green-500"><Plus className="w-4 h-4" /></button>
-                          )}
+            return (
+                <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8 flex flex-col">
+                    <header className="flex justify-between items-center mb-8 border-b border-slate-800 pb-6">
+                        <div className="flex items-center gap-4">
+                            <div className="bg-yellow-500 p-3 rounded-2xl">
+                                <Icon name="trophy" className="w-8 h-8 text-slate-950" />
+                            </div>
+                            <div>
+                                <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
+                                    大溪宗教教育團體共習活動
+                                </h1>
+                                <p className="text-slate-400 mt-1 flex items-center gap-2">
+                                    <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                                    即時電子計分板
+                                </p>
+                            </div>
                         </div>
-                      </div>
-                    ))}
-                  </div>
-                )}
 
-                <div className="text-right">
-                  <div className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-1">TOTAL SCORE</div>
-                  <div className={`text-7xl font-black tabular-nums ${index === 0 ? 'text-yellow-500' : 'text-white'}`}>
-                    {group.total}
-                  </div>
-                </div>
-              </div>
-
-              {/* 網格模式下的關卡詳情 */}
-              {viewMode === 'grid' && (
-                <div className="grid grid-cols-3 md:grid-cols-6 gap-4 border-t border-slate-700/50 pt-6">
-                  {STAGE_NAMES.map((name, sIdx) => (
-                    <div key={sIdx} className="bg-slate-950/50 rounded-2xl p-3 text-center border border-slate-800 hover:border-slate-600 transition-colors">
-                      <div className="text-[10px] text-slate-500 mb-2 font-bold uppercase">{name}</div>
-                      <div className="flex items-center justify-center gap-1">
-                        {editMode ? (
-                          <>
-                            <button onClick={() => updateScore(group.id, sIdx, -1)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-red-400 hover:bg-red-900/30">
-                              <Minus className="w-4 h-4" />
+                        <div className="flex gap-3">
+                            <button 
+                                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                                className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
+                            >
+                                <Icon name={viewMode === 'grid' ? 'list' : 'grid'} className="w-6 h-6" />
                             </button>
-                            <span className="text-2xl font-black w-10">{group.scores[sIdx]}</span>
-                            <button onClick={() => updateScore(group.id, sIdx, 1)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-green-400 hover:bg-green-900/30">
-                              <Plus className="w-4 h-4" />
+                            <button 
+                                onClick={() => setEditMode(!editMode)}
+                                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${editMode ? 'bg-green-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                            >
+                                <Icon name={editMode ? 'save' : 'edit'} className="w-5 h-5" />
+                                {editMode ? '完成編輯' : '後台管理'}
                             </button>
-                          </>
-                        ) : (
-                          <span className={`text-3xl font-black ${group.scores[sIdx] > 0 ? 'text-blue-400' : 'text-slate-700'}`}>
-                            {group.scores[sIdx]}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                  ))}
+                            {editMode && (
+                                <button onClick={resetScores} className="p-3 rounded-xl bg-red-900/50 text-red-400 border border-red-800/50">
+                                    <Icon name="refresh" className="w-6 h-6" />
+                                </button>
+                            )}
+                        </div>
+                    </header>
+
+                    <main className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
+                        <div className={viewMode === 'grid' ? "grid grid-cols-1 lg:grid-cols-2 gap-6" : "flex flex-col gap-4"}>
+                            {rankedGroups.map((group, index) => (
+                                <div key={group.id} className={`relative overflow-hidden rounded-3xl transition-all duration-500 transform ${index === 0 ? 'scale-[1.02] z-10' : 'scale-100'} ${viewMode === 'list' ? 'flex items-center p-6' : 'p-8'} bg-gradient-to-br from-slate-900 to-slate-800 border-2 ${index === 0 ? 'border-yellow-500/50 shadow-[0_0_40px_rgba(234,179,8,0.15)]' : 'border-slate-800'}`}>
+                                    <div className={`absolute top-0 left-0 w-16 h-16 flex items-center justify-center font-black text-2xl ${index === 0 ? 'bg-yellow-500 text-slate-950' : index === 1 ? 'bg-slate-300 text-slate-900' : index === 2 ? 'bg-orange-700 text-white' : 'bg-slate-700 text-slate-400'} rounded-br-3xl shadow-lg`}>
+                                        {index + 1}
+                                    </div>
+
+                                    <div className={`${viewMode === 'list' ? 'flex-1 flex items-center' : 'mb-8 mt-4 flex justify-between items-end'}`}>
+                                        <div className="flex items-center gap-6">
+                                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${index === 0 ? 'bg-yellow-500/10' : 'bg-slate-800'}`}>
+                                                <Icon name="users" className={`w-8 h-8 ${index === 0 ? 'text-yellow-500' : 'text-slate-400'}`} />
+                                            </div>
+                                            <div>
+                                                <h2 className="text-4xl font-bold">{group.name}</h2>
+                                                <div className="flex gap-2 mt-2">
+                                                    {STAGE_NAMES.map((_, i) => (
+                                                        <div key={i} className={`w-2 h-2 rounded-full ${group.scores[i] > 0 ? 'bg-blue-500' : 'bg-slate-700'}`}></div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        {viewMode === 'list' && (
+                                            <div className="flex-1 px-12 grid grid-cols-6 gap-2 text-center">
+                                                {group.scores.map((score, sIdx) => (
+                                                    <div key={sIdx}>
+                                                        <div className="text-[10px] text-slate-500 mb-1 uppercase tracking-wider">{STAGE_NAMES[sIdx]}</div>
+                                                        <div className="flex items-center justify-center gap-2">
+                                                            {editMode && <button onClick={() => updateScore(group.id, sIdx, -1)} className="p-1 text-slate-500 hover:text-red-500"><Icon name="minus" className="w-4 h-4" /></button>}
+                                                            <span className={`text-xl font-mono ${score > 0 ? 'text-blue-400' : 'text-slate-600'}`}>{score}</span>
+                                                            {editMode && <button onClick={() => updateScore(group.id, sIdx, 1)} className="p-1 text-slate-500 hover:text-green-500"><Icon name="plus" className="w-4 h-4" /></button>}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        <div className="text-right">
+                                            <div className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-1">TOTAL</div>
+                                            <div className={`text-7xl font-black tabular-nums ${index === 0 ? 'text-yellow-500' : 'text-white'}`}>
+                                                {group.total}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {viewMode === 'grid' && (
+                                        <div className="grid grid-cols-3 md:grid-cols-6 gap-4 border-t border-slate-700/50 pt-6">
+                                            {STAGE_NAMES.map((name, sIdx) => (
+                                                <div key={sIdx} className="bg-slate-950/50 rounded-2xl p-3 text-center border border-slate-800">
+                                                    <div className="text-[10px] text-slate-500 mb-2 font-bold uppercase">{name}</div>
+                                                    <div className="flex items-center justify-center gap-1">
+                                                        {editMode ? (
+                                                            <>
+                                                                <button onClick={() => updateScore(group.id, sIdx, -1)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-red-400 hover:bg-red-900/30"><Icon name="minus" className="w-4 h-4" /></button>
+                                                                <span className="text-2xl font-black w-10">{group.scores[sIdx]}</span>
+                                                                <button onClick={() => updateScore(group.id, sIdx, 1)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-green-400 hover:bg-green-900/30"><Icon name="plus" className="w-4 h-4" /></button>
+                                                            </>
+                                                        ) : (
+                                                            <span className={`text-3xl font-black ${group.scores[sIdx] > 0 ? 'text-blue-400' : 'text-slate-700'}`}>{group.scores[sIdx]}</span>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </div>
+                            ))}
+                        </div>
+                    </main>
+
+                    <footer className="mt-8 pt-6 border-t border-slate-800 flex justify-between items-center text-slate-500 text-sm">
+                        <div className="flex gap-6">
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                                <span>第一名領先中</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
+                                <span>已得分關卡</span>
+                            </div>
+                        </div>
+                        <div className="font-mono bg-slate-900 px-4 py-2 rounded-lg border border-slate-800">
+                            最後更新: {new Date().toLocaleTimeString()}
+                        </div>
+                    </footer>
                 </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </main>
+            );
+        }
 
-      {/* 底部裝飾與統計 */}
-      <footer className="mt-8 pt-6 border-t border-slate-800 flex justify-between items-center text-slate-500 text-sm">
-        <div className="flex gap-6">
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-            <span>第一名領先中</span>
-          </div>
-          <div className="flex items-center gap-2">
-            <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-            <span>已得分關卡</span>
-          </div>
-        </div>
-        <div className="font-mono bg-slate-900 px-4 py-2 rounded-lg border border-slate-800">
-          Last Updated: {new Date().toLocaleTimeString()}
-        </div>
-      </footer>
-
-      <style dangerouslySetInnerHTML={{ __html: `
-        .custom-scrollbar::-webkit-scrollbar {
-          width: 6px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-track {
-          background: transparent;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb {
-          background: #1e293b;
-          border-radius: 10px;
-        }
-        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #334155;
-        }
-      `}} />
-    </div>
-  );
-}
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
