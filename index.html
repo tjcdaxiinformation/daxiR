@@ -18,13 +18,14 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334155; }
         .bar-transition { transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1); }
+        .avatar-glow { box-shadow: 0 0 15px rgba(59, 130, 246, 0.5); }
     </style>
 </head>
 <body class="bg-slate-950 text-white">
     <div id="root"></div>
 
     <script type="text/babel">
-        const { useState, useEffect, useMemo } = React;
+        const { useState, useEffect, useMemo, useRef } = React;
 
         // 圖示組件 - 手寫 SVG 確保穩定性
         const Icon = ({ name, className }) => {
@@ -38,27 +39,49 @@
                 minus: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="5" y1="12" x2="19" y2="12"/></svg>,
                 grid: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
                 list: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
-                chart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
+                chart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>,
+                camera: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
             };
             return icons[name] || null;
         };
 
         const STAGE_NAMES = ['第一關', '第二關', '第三關', '第四關', '第五關', '第六關'];
         const initialGroups = [
-            { id: '1', name: '第一組', scores: [5, 5, 5, 0, 0, 0], total: 15 },
-            { id: '2', name: '第二組', scores: [2, 5, 5, 0, 0, 0], total: 12 },
-            { id: '3', name: '第三組', scores: [2, 2, 2, 0, 0, 0], total: 6 },
-            { id: '4', name: '第四組', scores: [2, 0, 0, 2, 0, 0], total: 4 },
+            { id: '1', name: '第一組', scores: [5, 5, 5, 0, 0, 0], total: 15, avatar: null },
+            { id: '2', name: '第二組', scores: [2, 5, 5, 0, 0, 0], total: 12, avatar: null },
+            { id: '3', name: '第三組', scores: [2, 2, 2, 0, 0, 0], total: 6, avatar: null },
+            { id: '4', name: '第四組', scores: [2, 0, 0, 2, 0, 0], total: 4, avatar: null },
         ];
 
         function App() {
             const [groups, setGroups] = useState(initialGroups);
             const [editMode, setEditMode] = useState(false);
-            const [viewMode, setViewMode] = useState('grid'); // 'grid', 'list', 'chart'
+            const [viewMode, setViewMode] = useState('grid');
+            const fileInputRef = useRef(null);
+            const [activeGroupId, setActiveGroupId] = useState(null);
 
             // 更新隊名
             const updateName = (groupId, newName) => {
                 setGroups(groups.map(g => g.id === groupId ? { ...g, name: newName } : g));
+            };
+
+            // 更新大頭貼
+            const handleAvatarUpload = (e) => {
+                const file = e.target.files[0];
+                if (file && activeGroupId) {
+                    const reader = new FileReader();
+                    reader.onloadend = () => {
+                        setGroups(groups.map(g => g.id === activeGroupId ? { ...g, avatar: reader.result } : g));
+                        setActiveGroupId(null);
+                    };
+                    reader.readAsDataURL(file);
+                }
+            };
+
+            const triggerUpload = (groupId) => {
+                if (!editMode) return;
+                setActiveGroupId(groupId);
+                fileInputRef.current.click();
             };
 
             // 更新分數邏輯
@@ -80,7 +103,7 @@
                 return [...groups].sort((a, b) => b.total - a.total);
             }, [groups]);
 
-            // 最大分數 (用於計算長條圖比例)
+            // 最大分數
             const maxScore = useMemo(() => {
                 const max = Math.max(...groups.map(g => g.total));
                 return max > 0 ? max : 10;
@@ -94,6 +117,15 @@
 
             return (
                 <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8 flex flex-col">
+                    {/* 隱藏的檔案上傳控制項 */}
+                    <input 
+                        type="file" 
+                        ref={fileInputRef} 
+                        onChange={handleAvatarUpload} 
+                        accept="image/*" 
+                        className="hidden" 
+                    />
+
                     <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-800 pb-6 gap-4">
                         <div className="flex items-center gap-4">
                             <div className="bg-yellow-500 p-3 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.3)]">
@@ -103,7 +135,7 @@
                                 <h1 className="text-3xl md:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-yellow-400 to-orange-500">
                                     大溪宗教教育團體共習活動
                                 </h1>
-                                <p className="text-slate-400 mt-1 flex items-center gap-2">
+                                <p className="text-slate-400 mt-1 flex items-center gap-2 font-medium">
                                     <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
                                     即時電子計分板系統
                                 </p>
@@ -143,7 +175,7 @@
                         {viewMode === 'chart' ? (
                             /* 長條圖視圖 */
                             <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-8 flex flex-col gap-8">
-                                <h3 className="text-2xl font-bold text-slate-400 flex items-center gap-2">
+                                <h3 className="text-2xl font-bold text-slate-400 flex items-center gap-2 uppercase tracking-widest">
                                     <Icon name="chart" className="w-6 h-6" /> 即時排名分析
                                 </h3>
                                 <div className="space-y-10 py-4">
@@ -154,6 +186,9 @@
                                                     <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
                                                         {index + 1}
                                                     </span>
+                                                    <div className="w-10 h-10 rounded-lg bg-slate-800 overflow-hidden shrink-0 border border-slate-700">
+                                                        {group.avatar ? <img src={group.avatar} className="w-full h-full object-cover" /> : <Icon name="users" className="w-full h-full p-2 text-slate-600" />}
+                                                    </div>
                                                     <span className="text-2xl font-bold">{group.name}</span>
                                                 </div>
                                                 <span className={`text-3xl font-black ${index === 0 ? 'text-yellow-500' : 'text-white'}`}>
@@ -187,9 +222,24 @@
 
                                         <div className={`${viewMode === 'list' ? 'flex-1 flex flex-col sm:flex-row items-center w-full' : 'mb-8 mt-4 flex justify-between items-end'}`}>
                                             <div className="flex items-center gap-6 flex-1">
-                                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 ${index === 0 ? 'bg-yellow-500/10' : 'bg-slate-800'}`}>
-                                                    <Icon name="users" className={`w-8 h-8 ${index === 0 ? 'text-yellow-500' : 'text-slate-400'}`} />
+                                                {/* 頭像區域 */}
+                                                <div 
+                                                    onClick={() => triggerUpload(group.id)}
+                                                    className={`w-20 h-20 rounded-2xl flex items-center justify-center shrink-0 overflow-hidden border-2 transition-all group/avatar relative ${editMode ? 'cursor-pointer border-yellow-500 hover:border-white shadow-lg' : (index === 0 ? 'border-yellow-500 bg-yellow-500/10' : 'border-slate-700 bg-slate-800')}`}
+                                                >
+                                                    {group.avatar ? (
+                                                        <img src={group.avatar} className="w-full h-full object-cover" />
+                                                    ) : (
+                                                        <Icon name="users" className={`w-10 h-10 ${index === 0 ? 'text-yellow-500' : 'text-slate-400'}`} />
+                                                    )}
+                                                    
+                                                    {editMode && (
+                                                        <div className="absolute inset-0 bg-black/60 flex items-center justify-center opacity-0 group-hover/avatar:opacity-100 transition-opacity">
+                                                            <Icon name="camera" className="w-8 h-8 text-white" />
+                                                        </div>
+                                                    )}
                                                 </div>
+
                                                 <div className="flex-1 min-w-0">
                                                     {editMode ? (
                                                         <input 
@@ -200,11 +250,11 @@
                                                             placeholder="輸入隊名..."
                                                         />
                                                     ) : (
-                                                        <h2 className="text-4xl font-bold truncate">{group.name}</h2>
+                                                        <h2 className="text-4xl font-bold truncate tracking-tight">{group.name}</h2>
                                                     )}
                                                     <div className="flex gap-2 mt-3">
                                                         {STAGE_NAMES.map((_, i) => (
-                                                            <div key={i} className={`w-2 h-2 rounded-full transition-colors duration-500 ${group.scores[i] > 0 ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-700'}`}></div>
+                                                            <div key={i} className={`w-2 h-2 rounded-full transition-all duration-500 ${group.scores[i] > 0 ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-700'}`}></div>
                                                         ))}
                                                     </div>
                                                 </div>
@@ -214,7 +264,7 @@
                                                 <div className="hidden xl:grid grid-cols-6 gap-3 px-8 text-center border-x border-slate-800">
                                                     {group.scores.map((score, sIdx) => (
                                                         <div key={sIdx} className="w-16">
-                                                            <div className="text-[10px] text-slate-500 mb-1 font-bold uppercase">{STAGE_NAMES[sIdx]}</div>
+                                                            <div className="text-[10px] text-slate-500 mb-1 font-bold uppercase tracking-tighter">{STAGE_NAMES[sIdx]}</div>
                                                             <div className="flex items-center justify-center gap-1">
                                                                 {editMode && <button onClick={() => updateScore(group.id, sIdx, -1)} className="text-slate-500 hover:text-red-500 transition-colors"><Icon name="minus" className="w-3 h-3" /></button>}
                                                                 <span className={`text-xl font-black tabular-nums ${score > 0 ? 'text-blue-400' : 'text-slate-600'}`}>{score}</span>
@@ -237,7 +287,7 @@
                                             <div className="grid grid-cols-3 md:grid-cols-6 gap-3 border-t border-slate-800/50 pt-6">
                                                 {STAGE_NAMES.map((name, sIdx) => (
                                                     <div key={sIdx} className="bg-slate-950/40 rounded-2xl p-3 text-center border border-slate-800 group hover:border-slate-700 transition-colors">
-                                                        <div className="text-[10px] text-slate-500 mb-2 font-bold">{name}</div>
+                                                        <div className="text-[10px] text-slate-500 mb-2 font-bold uppercase tracking-tighter">{name}</div>
                                                         <div className="flex items-center justify-center gap-1">
                                                             {editMode ? (
                                                                 <>
@@ -271,9 +321,9 @@
                             </div>
                         </div>
                         <div className="flex items-center gap-4">
-                            <span className="bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-xs">模式：{viewMode === 'grid' ? '網格' : viewMode === 'list' ? '列表' : '圖表'}</span>
+                            <span className="bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-xs font-bold">模式：{viewMode === 'grid' ? '網格' : viewMode === 'list' ? '列表' : '圖表'}</span>
                             <div className="font-mono bg-slate-900 px-4 py-2 rounded-xl border border-slate-800 shadow-xl text-slate-400">
-                                <span className="text-slate-600 mr-2">更新時間</span> {new Date().toLocaleTimeString()}
+                                <span className="text-slate-600 mr-2 font-bold uppercase">Update</span> {new Date().toLocaleTimeString()}
                             </div>
                         </div>
                     </footer>
