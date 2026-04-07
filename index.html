@@ -10,15 +10,14 @@
     <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
     <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
     <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- 載入 Lucide 圖示 -->
-    <script src="https://unpkg.com/lucide@latest"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap');
-        body { font-family: 'Inter', sans-serif; }
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        body { font-family: 'Inter', 'Noto Sans TC', sans-serif; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #334155; }
+        .bar-transition { transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1); }
     </style>
 </head>
 <body class="bg-slate-950 text-white">
@@ -27,21 +26,8 @@
     <script type="text/babel">
         const { useState, useEffect, useMemo } = React;
 
-        // 圖示組件
+        // 圖示組件 - 手寫 SVG 確保穩定性
         const Icon = ({ name, className }) => {
-            const [svg, setSvg] = useState('');
-            useEffect(() => {
-                // 使用 Lucide 建立圖示
-                if (window.lucide) {
-                    const iconElement = document.createElement('div');
-                    const icon = window.lucide.icons[name];
-                    if (icon) {
-                        const svgString = window.lucide.createIcons({ icons: { [name]: icon } });
-                    }
-                }
-            }, [name]);
-            
-            // 由於 UMD 版本限制，我們直接使用 SVG 路徑來確保穩定性
             const icons = {
                 trophy: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>,
                 users: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>,
@@ -51,7 +37,8 @@
                 plus: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>,
                 minus: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="5" y1="12" x2="19" y2="12"/></svg>,
                 grid: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>,
-                list: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+                list: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>,
+                chart: <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className}><line x1="12" y1="20" x2="12" y2="10"/><line x1="18" y1="20" x2="18" y2="4"/><line x1="6" y1="20" x2="6" y2="16"/></svg>
             };
             return icons[name] || null;
         };
@@ -67,7 +54,12 @@
         function App() {
             const [groups, setGroups] = useState(initialGroups);
             const [editMode, setEditMode] = useState(false);
-            const [viewMode, setViewMode] = useState('grid');
+            const [viewMode, setViewMode] = useState('grid'); // 'grid', 'list', 'chart'
+
+            // 更新隊名
+            const updateName = (groupId, newName) => {
+                setGroups(groups.map(g => g.id === groupId ? { ...g, name: newName } : g));
+            };
 
             // 更新分數邏輯
             const updateScore = (groupId, stageIndex, delta) => {
@@ -83,26 +75,28 @@
                 setGroups(newGroups);
             };
 
+            // 排名邏輯
             const rankedGroups = useMemo(() => {
                 return [...groups].sort((a, b) => b.total - a.total);
             }, [groups]);
 
+            // 最大分數 (用於計算長條圖比例)
+            const maxScore = useMemo(() => {
+                const max = Math.max(...groups.map(g => g.total));
+                return max > 0 ? max : 10;
+            }, [groups]);
+
             const resetScores = () => {
                 if (confirm("確定要將所有分數歸零嗎？")) {
-                    const reset = groups.map(g => ({
-                        ...g,
-                        scores: [0, 0, 0, 0, 0, 0],
-                        total: 0
-                    }));
-                    setGroups(reset);
+                    setGroups(groups.map(g => ({ ...g, scores: [0,0,0,0,0,0], total: 0 })));
                 }
             };
 
             return (
                 <div className="min-h-screen bg-slate-950 text-white p-4 md:p-8 flex flex-col">
-                    <header className="flex justify-between items-center mb-8 border-b border-slate-800 pb-6">
+                    <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 border-b border-slate-800 pb-6 gap-4">
                         <div className="flex items-center gap-4">
-                            <div className="bg-yellow-500 p-3 rounded-2xl">
+                            <div className="bg-yellow-500 p-3 rounded-2xl shadow-[0_0_20px_rgba(234,179,8,0.3)]">
                                 <Icon name="trophy" className="w-8 h-8 text-slate-950" />
                             </div>
                             <div>
@@ -111,27 +105,34 @@
                                 </h1>
                                 <p className="text-slate-400 mt-1 flex items-center gap-2">
                                     <span className="inline-block w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                                    即時電子計分板
+                                    即時電子計分板系統
                                 </p>
                             </div>
                         </div>
 
-                        <div className="flex gap-3">
-                            <button 
-                                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-                                className="p-3 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors"
-                            >
-                                <Icon name={viewMode === 'grid' ? 'list' : 'grid'} className="w-6 h-6" />
-                            </button>
+                        <div className="flex gap-2 w-full md:w-auto">
+                            <div className="bg-slate-900 p-1 rounded-xl flex">
+                                <button onClick={() => setViewMode('grid')} className={`p-2 rounded-lg transition-all ${viewMode === 'grid' ? 'bg-slate-700 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`} title="網格視圖">
+                                    <Icon name="grid" className="w-5 h-5" />
+                                </button>
+                                <button onClick={() => setViewMode('list')} className={`p-2 rounded-lg transition-all ${viewMode === 'list' ? 'bg-slate-700 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`} title="列表視圖">
+                                    <Icon name="list" className="w-5 h-5" />
+                                </button>
+                                <button onClick={() => setViewMode('chart')} className={`p-2 rounded-lg transition-all ${viewMode === 'chart' ? 'bg-slate-700 text-white shadow-lg' : 'text-slate-500 hover:text-slate-300'}`} title="長條圖分析">
+                                    <Icon name="chart" className="w-5 h-5" />
+                                </button>
+                            </div>
+                            
                             <button 
                                 onClick={() => setEditMode(!editMode)}
-                                className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold transition-all ${editMode ? 'bg-green-600 text-white' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
+                                className={`flex items-center gap-2 px-4 py-2 rounded-xl font-bold transition-all ${editMode ? 'bg-green-600 text-white shadow-[0_0_15px_rgba(22,163,74,0.4)]' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}`}
                             >
                                 <Icon name={editMode ? 'save' : 'edit'} className="w-5 h-5" />
-                                {editMode ? '完成編輯' : '後台管理'}
+                                <span className="hidden sm:inline">{editMode ? '完成編輯' : '後台管理'}</span>
                             </button>
+                            
                             {editMode && (
-                                <button onClick={resetScores} className="p-3 rounded-xl bg-red-900/50 text-red-400 border border-red-800/50">
+                                <button onClick={resetScores} className="p-2 rounded-xl bg-red-900/50 text-red-400 border border-red-800/50 hover:bg-red-800 transition-colors">
                                     <Icon name="refresh" className="w-6 h-6" />
                                 </button>
                             )}
@@ -139,89 +140,141 @@
                     </header>
 
                     <main className="flex-1 overflow-y-auto pr-2 custom-scrollbar">
-                        <div className={viewMode === 'grid' ? "grid grid-cols-1 lg:grid-cols-2 gap-6" : "flex flex-col gap-4"}>
-                            {rankedGroups.map((group, index) => (
-                                <div key={group.id} className={`relative overflow-hidden rounded-3xl transition-all duration-500 transform ${index === 0 ? 'scale-[1.02] z-10' : 'scale-100'} ${viewMode === 'list' ? 'flex items-center p-6' : 'p-8'} bg-gradient-to-br from-slate-900 to-slate-800 border-2 ${index === 0 ? 'border-yellow-500/50 shadow-[0_0_40px_rgba(234,179,8,0.15)]' : 'border-slate-800'}`}>
-                                    <div className={`absolute top-0 left-0 w-16 h-16 flex items-center justify-center font-black text-2xl ${index === 0 ? 'bg-yellow-500 text-slate-950' : index === 1 ? 'bg-slate-300 text-slate-900' : index === 2 ? 'bg-orange-700 text-white' : 'bg-slate-700 text-slate-400'} rounded-br-3xl shadow-lg`}>
-                                        {index + 1}
-                                    </div>
-
-                                    <div className={`${viewMode === 'list' ? 'flex-1 flex items-center' : 'mb-8 mt-4 flex justify-between items-end'}`}>
-                                        <div className="flex items-center gap-6">
-                                            <div className={`w-16 h-16 rounded-2xl flex items-center justify-center ${index === 0 ? 'bg-yellow-500/10' : 'bg-slate-800'}`}>
-                                                <Icon name="users" className={`w-8 h-8 ${index === 0 ? 'text-yellow-500' : 'text-slate-400'}`} />
+                        {viewMode === 'chart' ? (
+                            /* 長條圖視圖 */
+                            <div className="bg-slate-900/50 border border-slate-800 rounded-3xl p-8 flex flex-col gap-8">
+                                <h3 className="text-2xl font-bold text-slate-400 flex items-center gap-2">
+                                    <Icon name="chart" className="w-6 h-6" /> 即時排名分析
+                                </h3>
+                                <div className="space-y-10 py-4">
+                                    {rankedGroups.map((group, index) => (
+                                        <div key={group.id} className="relative">
+                                            <div className="flex justify-between items-end mb-3">
+                                                <div className="flex items-center gap-4">
+                                                    <span className={`w-8 h-8 rounded-full flex items-center justify-center font-bold ${index === 0 ? 'bg-yellow-500 text-slate-950' : 'bg-slate-800 text-slate-400'}`}>
+                                                        {index + 1}
+                                                    </span>
+                                                    <span className="text-2xl font-bold">{group.name}</span>
+                                                </div>
+                                                <span className={`text-3xl font-black ${index === 0 ? 'text-yellow-500' : 'text-white'}`}>
+                                                    {group.total} <span className="text-sm font-normal text-slate-500 uppercase">PTS</span>
+                                                </span>
                                             </div>
-                                            <div>
-                                                <h2 className="text-4xl font-bold">{group.name}</h2>
-                                                <div className="flex gap-2 mt-2">
-                                                    {STAGE_NAMES.map((_, i) => (
-                                                        <div key={i} className={`w-2 h-2 rounded-full ${group.scores[i] > 0 ? 'bg-blue-500' : 'bg-slate-700'}`}></div>
+                                            <div className="h-6 w-full bg-slate-800 rounded-full overflow-hidden shadow-inner">
+                                                <div 
+                                                    className={`h-full bar-transition rounded-full ${
+                                                        index === 0 ? 'bg-gradient-to-r from-yellow-600 to-yellow-400' : 
+                                                        index === 1 ? 'bg-gradient-to-r from-slate-500 to-slate-300' : 
+                                                        'bg-gradient-to-r from-blue-600 to-blue-400'
+                                                    }`}
+                                                    style={{ width: `${(group.total / maxScore) * 100}%` }}
+                                                />
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        ) : (
+                            /* 網格或列表視圖 */
+                            <div className={viewMode === 'grid' ? "grid grid-cols-1 lg:grid-cols-2 gap-6" : "flex flex-col gap-4"}>
+                                {rankedGroups.map((group, index) => (
+                                    <div key={group.id} className={`relative overflow-hidden rounded-3xl transition-all duration-500 transform ${index === 0 ? 'scale-[1.01] z-10' : 'scale-100'} ${viewMode === 'list' ? 'flex flex-col sm:flex-row items-center p-6 gap-6' : 'p-8'} bg-gradient-to-br from-slate-900 to-slate-800 border-2 ${index === 0 ? 'border-yellow-500/50 shadow-[0_0_40px_rgba(234,179,8,0.1)]' : 'border-slate-800'}`}>
+                                        
+                                        {/* 名次角標 */}
+                                        <div className={`absolute top-0 left-0 w-14 h-14 flex items-center justify-center font-black text-xl ${index === 0 ? 'bg-yellow-500 text-slate-950' : index === 1 ? 'bg-slate-300 text-slate-900' : index === 2 ? 'bg-orange-700 text-white' : 'bg-slate-700 text-slate-400'} rounded-br-2xl shadow-lg`}>
+                                            {index + 1}
+                                        </div>
+
+                                        <div className={`${viewMode === 'list' ? 'flex-1 flex flex-col sm:flex-row items-center w-full' : 'mb-8 mt-4 flex justify-between items-end'}`}>
+                                            <div className="flex items-center gap-6 flex-1">
+                                                <div className={`w-16 h-16 rounded-2xl flex items-center justify-center shrink-0 ${index === 0 ? 'bg-yellow-500/10' : 'bg-slate-800'}`}>
+                                                    <Icon name="users" className={`w-8 h-8 ${index === 0 ? 'text-yellow-500' : 'text-slate-400'}`} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    {editMode ? (
+                                                        <input 
+                                                            type="text"
+                                                            value={group.name}
+                                                            onChange={(e) => updateName(group.id, e.target.value)}
+                                                            className="bg-transparent border-b-2 border-dashed border-slate-600 focus:border-yellow-500 outline-none text-3xl font-bold w-full py-1 text-yellow-400"
+                                                            placeholder="輸入隊名..."
+                                                        />
+                                                    ) : (
+                                                        <h2 className="text-4xl font-bold truncate">{group.name}</h2>
+                                                    )}
+                                                    <div className="flex gap-2 mt-3">
+                                                        {STAGE_NAMES.map((_, i) => (
+                                                            <div key={i} className={`w-2 h-2 rounded-full transition-colors duration-500 ${group.scores[i] > 0 ? 'bg-blue-500 shadow-[0_0_8px_rgba(59,130,246,0.5)]' : 'bg-slate-700'}`}></div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {viewMode === 'list' && (
+                                                <div className="hidden xl:grid grid-cols-6 gap-3 px-8 text-center border-x border-slate-800">
+                                                    {group.scores.map((score, sIdx) => (
+                                                        <div key={sIdx} className="w-16">
+                                                            <div className="text-[10px] text-slate-500 mb-1 font-bold uppercase">{STAGE_NAMES[sIdx]}</div>
+                                                            <div className="flex items-center justify-center gap-1">
+                                                                {editMode && <button onClick={() => updateScore(group.id, sIdx, -1)} className="text-slate-500 hover:text-red-500 transition-colors"><Icon name="minus" className="w-3 h-3" /></button>}
+                                                                <span className={`text-xl font-black tabular-nums ${score > 0 ? 'text-blue-400' : 'text-slate-600'}`}>{score}</span>
+                                                                {editMode && <button onClick={() => updateScore(group.id, sIdx, 1)} className="text-slate-500 hover:text-green-500 transition-colors"><Icon name="plus" className="w-3 h-3" /></button>}
+                                                            </div>
+                                                        </div>
                                                     ))}
+                                                </div>
+                                            )}
+
+                                            <div className={`${viewMode === 'list' ? 'sm:pl-8 text-center sm:text-right mt-4 sm:mt-0' : 'text-right'}`}>
+                                                <div className="text-slate-500 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Total Score</div>
+                                                <div className={`text-7xl font-black tabular-nums tracking-tighter ${index === 0 ? 'text-yellow-500 drop-shadow-[0_0_15px_rgba(234,179,8,0.3)]' : 'text-white'}`}>
+                                                    {group.total}
                                                 </div>
                                             </div>
                                         </div>
 
-                                        {viewMode === 'list' && (
-                                            <div className="flex-1 px-12 grid grid-cols-6 gap-2 text-center">
-                                                {group.scores.map((score, sIdx) => (
-                                                    <div key={sIdx}>
-                                                        <div className="text-[10px] text-slate-500 mb-1 uppercase tracking-wider">{STAGE_NAMES[sIdx]}</div>
-                                                        <div className="flex items-center justify-center gap-2">
-                                                            {editMode && <button onClick={() => updateScore(group.id, sIdx, -1)} className="p-1 text-slate-500 hover:text-red-500"><Icon name="minus" className="w-4 h-4" /></button>}
-                                                            <span className={`text-xl font-mono ${score > 0 ? 'text-blue-400' : 'text-slate-600'}`}>{score}</span>
-                                                            {editMode && <button onClick={() => updateScore(group.id, sIdx, 1)} className="p-1 text-slate-500 hover:text-green-500"><Icon name="plus" className="w-4 h-4" /></button>}
+                                        {viewMode === 'grid' && (
+                                            <div className="grid grid-cols-3 md:grid-cols-6 gap-3 border-t border-slate-800/50 pt-6">
+                                                {STAGE_NAMES.map((name, sIdx) => (
+                                                    <div key={sIdx} className="bg-slate-950/40 rounded-2xl p-3 text-center border border-slate-800 group hover:border-slate-700 transition-colors">
+                                                        <div className="text-[10px] text-slate-500 mb-2 font-bold">{name}</div>
+                                                        <div className="flex items-center justify-center gap-1">
+                                                            {editMode ? (
+                                                                <>
+                                                                    <button onClick={() => updateScore(group.id, sIdx, -1)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-red-400 hover:bg-red-500 hover:text-white transition-all"><Icon name="minus" className="w-4 h-4" /></button>
+                                                                    <span className="text-2xl font-black w-8 tabular-nums">{group.scores[sIdx]}</span>
+                                                                    <button onClick={() => updateScore(group.id, sIdx, 1)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-green-400 hover:bg-green-500 hover:text-white transition-all"><Icon name="plus" className="w-4 h-4" /></button>
+                                                                </>
+                                                            ) : (
+                                                                <span className={`text-3xl font-black tabular-nums ${group.scores[sIdx] > 0 ? 'text-blue-400' : 'text-slate-700'}`}>{group.scores[sIdx]}</span>
+                                                            )}
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
                                         )}
-
-                                        <div className="text-right">
-                                            <div className="text-slate-400 text-sm font-bold uppercase tracking-widest mb-1">TOTAL</div>
-                                            <div className={`text-7xl font-black tabular-nums ${index === 0 ? 'text-yellow-500' : 'text-white'}`}>
-                                                {group.total}
-                                            </div>
-                                        </div>
                                     </div>
-
-                                    {viewMode === 'grid' && (
-                                        <div className="grid grid-cols-3 md:grid-cols-6 gap-4 border-t border-slate-700/50 pt-6">
-                                            {STAGE_NAMES.map((name, sIdx) => (
-                                                <div key={sIdx} className="bg-slate-950/50 rounded-2xl p-3 text-center border border-slate-800">
-                                                    <div className="text-[10px] text-slate-500 mb-2 font-bold uppercase">{name}</div>
-                                                    <div className="flex items-center justify-center gap-1">
-                                                        {editMode ? (
-                                                            <>
-                                                                <button onClick={() => updateScore(group.id, sIdx, -1)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-red-400 hover:bg-red-900/30"><Icon name="minus" className="w-4 h-4" /></button>
-                                                                <span className="text-2xl font-black w-10">{group.scores[sIdx]}</span>
-                                                                <button onClick={() => updateScore(group.id, sIdx, 1)} className="w-8 h-8 flex items-center justify-center rounded-lg bg-slate-800 text-green-400 hover:bg-green-900/30"><Icon name="plus" className="w-4 h-4" /></button>
-                                                            </>
-                                                        ) : (
-                                                            <span className={`text-3xl font-black ${group.scores[sIdx] > 0 ? 'text-blue-400' : 'text-slate-700'}`}>{group.scores[sIdx]}</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        )}
                     </main>
 
-                    <footer className="mt-8 pt-6 border-t border-slate-800 flex justify-between items-center text-slate-500 text-sm">
-                        <div className="flex gap-6">
-                            <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                                <span>第一名領先中</span>
+                    <footer className="mt-8 pt-6 border-t border-slate-800 flex flex-col sm:flex-row justify-between items-center gap-4 text-slate-500 text-sm font-medium">
+                        <div className="flex gap-8">
+                            <div className="flex items-center gap-2 group">
+                                <div className="w-3 h-3 rounded-full bg-yellow-500 shadow-[0_0_10px_rgba(234,179,8,0.5)]"></div>
+                                <span>當前領先</span>
                             </div>
                             <div className="flex items-center gap-2">
-                                <div className="w-3 h-3 rounded-full bg-blue-500"></div>
-                                <span>已得分關卡</span>
+                                <div className="w-3 h-3 rounded-full bg-blue-500 shadow-[0_0_10px_rgba(59,130,246,0.5)]"></div>
+                                <span>已達成關卡</span>
                             </div>
                         </div>
-                        <div className="font-mono bg-slate-900 px-4 py-2 rounded-lg border border-slate-800">
-                            最後更新: {new Date().toLocaleTimeString()}
+                        <div className="flex items-center gap-4">
+                            <span className="bg-slate-900 border border-slate-800 px-3 py-1 rounded-full text-xs">模式：{viewMode === 'grid' ? '網格' : viewMode === 'list' ? '列表' : '圖表'}</span>
+                            <div className="font-mono bg-slate-900 px-4 py-2 rounded-xl border border-slate-800 shadow-xl text-slate-400">
+                                <span className="text-slate-600 mr-2">更新時間</span> {new Date().toLocaleTimeString()}
+                            </div>
                         </div>
                     </footer>
                 </div>
