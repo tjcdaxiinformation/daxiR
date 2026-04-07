@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>默契大考驗 - 超大字體題庫</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@900&display=swap');
+        body {
+            background-color: #020617;
+            font-family: 'Noto Sans TC', sans-serif;
+            margin: 0;
+            overflow: hidden;
+        }
+        .fade-in {
+            animation: fadeIn 0.8s ease-out forwards;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: scale(0.95); }
+            to { opacity: 1; transform: scale(1); }
+        }
+        .glow-text {
+            text-shadow: 0 0 30px rgba(234, 179, 8, 0.3);
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect } = React;
+
+        const QUESTIONS = [
+            { q: "最喜歡的速食店？", a: "麥當勞 vs 肯德基" },
+            { q: "最怕的學科？", a: "數學 vs 英文" },
+            { q: "放假最想去的地方？", a: "山上 vs 海邊" },
+            { q: "最喜歡的飲料？", a: "珍珠奶茶 vs 水果茶" },
+            { q: "覺得聖經角色誰更酷？", a: "大衛 vs 摩西" },
+            { q: "早餐習慣吃什麼？", a: "漢堡 vs 蛋餅" },
+            { q: "遇到困難第一反應？", a: "先禱告 vs 先找朋友" },
+            { q: "最喜歡的季節？", a: "夏天 vs 冬天" },
+            { q: "看電影喜歡坐？", a: "前面 vs 後面" },
+            { q: "睡覺前會做的事？", a: "滑手機 vs 讀經禱告" },
+            { q: "最喜歡的水果？", a: "西瓜 vs 草莓" },
+            { q: "運動時喜歡？", a: "打球 vs 跑步" },
+            { q: "出門必帶的東西？", a: "錢包 vs 手機" },
+            { q: "喜歡的寵物？", a: "貓派 vs 狗派" },
+            { q: "洗澡先洗哪裡？", a: "洗頭 vs 洗身體" },
+            { q: "喝湯喜歡？", a: "熱騰騰 vs 溫溫的" }
+        ];
+
+        function App() {
+            const [index, setIndex] = useState(0);
+            const [isWelcome, setIsWelcome] = useState(true);
+
+            const next = () => {
+                if (isWelcome) {
+                    setIsWelcome(false);
+                } else {
+                    setIndex((prev) => (prev + 1) % QUESTIONS.length);
+                }
+            };
+
+            const prev = () => {
+                if (!isWelcome) {
+                    if (index === 0) {
+                        setIsWelcome(true);
+                    } else {
+                        setIndex((prev) => (prev - 1 + QUESTIONS.length) % QUESTIONS.length);
+                    }
+                }
+            };
+
+            useEffect(() => {
+                const handleKeyDown = (e) => {
+                    if (e.key === "ArrowRight" || e.key === " " || e.key === "Enter") next();
+                    if (e.key === "ArrowLeft") prev();
+                };
+                window.addEventListener("keydown", handleKeyDown);
+                return () => window.removeEventListener("keydown", handleKeyDown);
+            }, [index, isWelcome]);
+
+            return (
+                <div 
+                    className="h-screen w-screen flex flex-col items-center justify-center cursor-pointer select-none relative p-10"
+                    onClick={next}
+                >
+                    {/* 背景裝飾 */}
+                    <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none">
+                        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-yellow-500 rounded-full blur-[150px]"></div>
+                        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-600 rounded-full blur-[150px]"></div>
+                    </div>
+
+                    {isWelcome ? (
+                        <div className="fade-in text-center space-y-10 z-10">
+                            <h1 className="text-9xl md:text-[12rem] font-black text-yellow-500 tracking-tighter glow-text">
+                                默契
+                            </h1>
+                            <h1 className="text-9xl md:text-[12rem] font-black text-white tracking-tighter">
+                                大考驗
+                            </h1>
+                            <p className="text-4xl text-slate-500 font-bold animate-pulse mt-10">
+                                點擊畫面 或 按下空白鍵 開始
+                            </p>
+                        </div>
+                    ) : (
+                        <div key={index} className="fade-in text-center space-y-20 z-10 w-full max-w-7xl">
+                            {/* 題號 */}
+                            <div className="inline-block px-10 py-3 bg-yellow-500 text-slate-950 text-4xl font-black rounded-full mb-10 shadow-2xl">
+                                第 {index + 1} 題
+                            </div>
+                            
+                            {/* 題目 */}
+                            <h2 className="text-8xl md:text-[10rem] font-black text-white leading-tight glow-text">
+                                {QUESTIONS[index].q}
+                            </h2>
+                            
+                            {/* 選項 */}
+                            <div className="text-5xl md:text-7xl font-bold text-blue-400 tracking-[1rem] opacity-90 border-t border-slate-800 pt-20 inline-block w-full">
+                                {QUESTIONS[index].a}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* 底部導航提示 */}
+                    {!isWelcome && (
+                        <div className="absolute bottom-10 left-0 w-full flex justify-between px-20 text-slate-700 text-2xl font-bold">
+                            <div>← 按左鍵回上題</div>
+                            <div className="text-slate-500">{index + 1} / {QUESTIONS.length}</div>
+                            <div>按右鍵下題 →</div>
+                        </div>
+                    )}
+                </div>
+            );
+        }
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
