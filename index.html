@@ -64,7 +64,28 @@
             { q: "最喜歡的水果？", options: "西瓜 / 草莓" },
             { q: "運動時喜歡？", options: "打球 / 跑步" },
             { q: "出門必帶的東西？", options: "錢包 / 手機" },
-            { q: "喜歡的寵物？", options: "貓派 / 狗派" }
+            { q: "喜歡的寵物？", options: "貓派 / 狗派" },
+            // --- 新增 20 題 (聖經人物、信仰生活及簡單日常) ---
+            { q: "誰在魚肚子裡待了三天三夜？", options: "約拿 / 挪亞" },
+            { q: "聖經中誰順服神建造了方舟？", options: "挪亞 / 摩西" },
+            { q: "誰用一塊石子打敗了巨人歌利亞？", options: "大衛 / 掃羅" },
+            { q: "誰被賣到埃及當奴隸，後來成了宰相？", options: "約瑟 / 雅各" },
+            { q: "如果可以回到過去，最想親眼見證？", options: "摩西分紅海 / 耶穌平靜風浪" },
+            { q: "聖經中誰向神求智慧，成為最有智慧的王？", options: "所羅門 / 撒母耳" },
+            { q: "聚會遲到最常給的理由？", options: "睡過頭 / 公車沒來" },
+            { q: "聚會結束後的點心，你最想吃？", options: "炸雞排 / 珍珠奶茶" },
+            { q: "讀聖經時最喜歡哪一部分？", options: "舊約故事 / 新約福音書" },
+            { q: "禱告到快睡著的時候，你通常會？", options: "大聲禱告 / 站起來禱告" },
+            { q: "走進會堂時，你習慣坐在哪裡？", options: "前排認真區 / 後排安全區" },
+            { q: "唱詩歌讚美神時，你最喜歡？", options: "活潑拍手快歌 / 溫柔感動慢歌" },
+            { q: "你覺得每天最適合讀經的時間是？", options: "清晨剛起床 / 睡前夜深人靜" },
+            { q: "聽道想打瞌睡時，最好的提神法是？", options: "猛喝涼水 / 狂捏大腿" },
+            { q: "突然被值班教員點名帶領禱告時？", options: "緊張但順服接受 / 內心大喊不要是我" },
+            { q: "大考或面臨壓力時，你的第一動作是？", options: "狂Ｋ書 / 拼命禱告" },
+            { q: "平日要約同工聊天交通，最想去？", options: "安靜咖啡廳 / 熱鬧夜市" },
+            { q: "如果用一個詞形容你現在的靈命狀態？", options: "穩定慢跑中 / 蓄勢待發" },
+            { q: "你覺得靈修最不能缺少的是？", options: "讀經明白真理 / 禱告親近神" },
+            { q: "聚會結束後，你最希望回家做什麼？", options: "回想今天的得著 / 倒頭大睡休息" }
         ];
 
         const initialGroups = [
@@ -141,7 +162,7 @@
                                     </div>
                                     
                                     <div className="space-y-6">
-                                        <h2 className="text-6xl md:text-8xl font-black leading-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400">
+                                        <h2 className="text-5xl md:text-7xl font-black leading-tight bg-clip-text text-transparent bg-gradient-to-b from-white to-slate-400">
                                             {QUESTIONS[currentQIndex].q}
                                         </h2>
                                         <p className="text-3xl md:text-4xl text-blue-400 font-bold tracking-widest opacity-80">
@@ -151,7 +172,7 @@
 
                                     <div className="flex flex-col items-center gap-6 pt-8">
                                         <button onClick={nextQuestion} className="px-12 py-6 bg-yellow-500 hover:bg-yellow-400 text-slate-950 rounded-2xl text-3xl font-black transition-all transform hover:scale-105 active:scale-95 shadow-[0_20px_40px_rgba(234,179,8,0.3)]">
-                                            下一個題目
+                                            下一個題目 ({currentQIndex + 1} / {QUESTIONS.length})
                                         </button>
                                         <p className="text-slate-500 text-xl font-bold">預備... 三、二、一！</p>
                                     </div>
